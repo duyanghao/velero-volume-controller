@@ -32,12 +32,9 @@ type Config struct {
 
 // validate the configuration
 func (c *Config) validate() error {
-	if c.ClusterServerCfg.MasterURL == "" || c.ClusterServerCfg.KubeConfig == "" {
-		return fmt.Errorf("invalid kubernetes cluster server configurations, please check ...")
-	}
 	if c.VeleroVolumeCfg.IncludeNamespaces != "" && c.VeleroVolumeCfg.ExcludeNamespaces != "" ||
 		c.VeleroVolumeCfg.IncludeVolumeTypes != "" && c.VeleroVolumeCfg.ExcludeVolumeTypes != "" {
-		return fmt.Errorf("invalid velero volume resources configurations, please check ...")
+		return fmt.Errorf("Invalid velero volume resources configurations, please check ...")
 	}
 	// TODO: other configuration validate ...
 	return nil

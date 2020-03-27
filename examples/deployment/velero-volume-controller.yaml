@@ -15,8 +15,8 @@ spec:
         app: velero-volume-controller
     spec:
       containers:
-        - name: velero-volume-controller
-          image: REPLACE_IMAGE
+      - name: velero-volume-controller
+        image: REPLACE_IMAGE
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - name: config

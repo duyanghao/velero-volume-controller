@@ -1,5 +1,5 @@
 # Building stage
-FROM golang:1.12-alpine3.9
+FROM golang:1.13-alpine3.10
 
 RUN apk add --update make
 
@@ -24,7 +24,7 @@ RUN make src.build
 RUN mv build/velero-volume-controller/velero-volume-controller /go/bin
 
 # Production stage
-FROM alpine:3.9
+FROM alpine:3.10
 WORKDIR /go/bin
 
 # copy the go binaries from the building stage

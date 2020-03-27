@@ -36,16 +36,19 @@ $ bash hack/start.sh
 Running `velero-volume-controller` inside a kubernetes is more convenient compared with the external as this controller has added [Leader Election Mechanism](https://github.com/kubernetes/client-go/tree/master/examples/leader-election) and [Kubernetes deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) helps to keep it high-available:
 
 ```sh
-# generated image
+# Generated image
 $ make dockerfiles.build
-# retag and push to your docker registry
+# Retag and push to your docker registry
 $ docker tag duyanghao/velero-volume-controller:v2.0 xxx/duyanghao/velero-volume-controller:v2.0
 $ docker push xxx/duyanghao/velero-volume-controller:v2.0
 # Update the deployment 'Image' field with the built image name
 $ sed -i 's|REPLACE_IMAGE|xxx/duyanghao/velero-volume-controller:v2.0|g' examples/deployment/velero-volume-controller.yaml
-# create configmap
+# Create ClusterRole and ClusterRoleBinding
+$ kubectl apply -f examples/deployment/cluster-role.yaml
+$ kubectl apply -f examples/deployment/cluster-role-binding.yaml
+# Create ConfigMap
 $ kubectl apply -f examples/deployment/configmap.yaml
-# create velero-volume-controller deployment
+# Create velero-volume-controller deployment
 $ kubectl apply -f examples/deployment/velero-volume-controller.yaml
 ```
 
