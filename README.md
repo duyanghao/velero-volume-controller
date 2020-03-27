@@ -1,7 +1,7 @@
 velero-volume-controller
 ========================
 
-`velero-volume-controller` is a Kubernetes controller for [velero](https://github.com/vmware-tanzu/velero) that detects and adds relevant backup annotations to pods with [volumes](https://kubernetes.io/zh/docs/concepts/storage/volumes/)
+`velero-volume-controller` is a Kubernetes controller for [velero](https://github.com/vmware-tanzu/velero) that detects and adds relevant backup annotation to pods with [volumes](https://kubernetes.io/zh/docs/concepts/storage/volumes/)
 
 ## Refs
 

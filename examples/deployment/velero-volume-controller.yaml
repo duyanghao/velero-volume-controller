@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: velero-volume-controller
+  labels:
+    app: velero-volume-controller
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: velero-volume-controller
+  template:
+    metadata:
+      labels:
+        app: velero-volume-controller
+    spec:
+      containers:
+        - name: velero-volume-controller
+          image: REPLACE_IMAGE
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+          - name: config
+            mountPath: /velero-volume-controller/examples
+            readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: velero-volume-controller

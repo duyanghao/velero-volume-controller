@@ -1,0 +1,8 @@
+clusterServerCfg:
+  masterURL:
+  kubeConfig:
+veleroVolumeCfg:
+  includeNamespaces: test
+  excludeNamespaces:
+  includeVolumeTypes: persistentVolumeClaim
+  excludeVolumeTypes:
