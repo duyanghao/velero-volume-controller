@@ -72,10 +72,15 @@ func NewController(
 	klog.Info("Setting up event handlers")
 	// Set up an event handler for when Pod resources change
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueuePod,
+		AddFunc: func(obj interface{}) {
+			pod := obj.(*corev1.Pod)
+			klog.V(4).Infof("Watch Pod: '%s/%s' Added ...", pod.Namespace, pod.Name)
+			controller.enqueuePod(obj)
+		},
 		UpdateFunc: func(old, new interface{}) {
 			newPod := new.(*corev1.Pod)
 			oldPod := old.(*corev1.Pod)
+			klog.V(4).Infof("Watch Pod: '%s/%s' Updated ...", newPod.Namespace, newPod.Name)
 			if newPod.ResourceVersion == oldPod.ResourceVersion {
 				// Periodic resync will send update events for all known Pods.
 				// Two different versions of the same Pod will always have different RVs.
@@ -215,7 +220,7 @@ func (c *Controller) syncHandler(key string) error {
 			}
 		}
 		if !flag {
-			klog.V(4).Infof("drop pod: %s/%s as it's outside the range of including namespaces", pod.Namespace, pod.Name)
+			klog.V(4).Infof("drop pod: '%s/%s' as it's outside the range of including namespaces", pod.Namespace, pod.Name)
 			return nil
 		}
 	} else if c.cfg.ExcludeNamespaces != "" {
@@ -228,14 +233,14 @@ func (c *Controller) syncHandler(key string) error {
 			}
 		}
 		if !flag {
-			klog.V(4).Infof("drop pod: %s/%s as it's within the range of excluding namespaces", pod.Namespace, pod.Name)
+			klog.V(4).Infof("drop pod: '%s/%s' as it's within the range of excluding namespaces", pod.Namespace, pod.Name)
 			return nil
 		}
 	}
 
 	err = c.addBackupAnnotationsToPod(pod)
 	if err != nil {
-		klog.Errorf("failed to add velero backup annotations to pod: %s/%s, error: %s", pod.Namespace, pod.Name, err.Error())
+		klog.Errorf("failed to add velero backup annotations to pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
 		return err
 	}
 
@@ -251,7 +256,7 @@ func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 	for _, volume := range pod.Spec.Volumes {
 		// Check if volume uses persistentVolumeClaim and meets volume type requirements
 		if volume.PersistentVolumeClaim != nil && c.checkVolumeTypeRequirements(constants.VOLUME_TYPE_PERSISTENTVOLUMECLAIM) {
-			klog.V(4).Infof("pod '%s' uses volume '%s' from pvc '%s'", pod.Name, volume.Name, volume.PersistentVolumeClaim.ClaimName)
+			klog.V(4).Infof("pod '%s/%s' uses volume '%s' from pvc '%s'", pod.Namespace, pod.Name, volume.Name, volume.PersistentVolumeClaim.ClaimName)
 			veleroBackupAnnotationValue = append(veleroBackupAnnotationValue, volume.Name)
 		}
 		// TODO: add other volume types ...
