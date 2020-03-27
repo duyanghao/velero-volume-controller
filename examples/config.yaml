@@ -1,6 +1,8 @@
 clusterServerCfg:
   masterURL:
   kubeConfig:
+  leaseLockNamespace: velero
+  leaseLockName: velero-volume-controller
 veleroVolumeCfg:
   includeNamespaces: test
   excludeNamespaces:

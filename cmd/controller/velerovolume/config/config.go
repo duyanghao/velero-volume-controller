@@ -19,6 +19,10 @@ type ClusterServerCfg struct {
 	MasterURL string `yaml:"masterURL,omitempty"`
 	// Path to a kubeconfig. Only required if out-of-cluster.
 	KubeConfig string `yaml:"kubeConfig,omitempty"`
+	// LeaseLock namespace
+	LeaseLockNamespace string `yaml:"leaseLockNamespace,omitempty"`
+	// LeaseLock name
+	LeaseLockName string `yaml:"leaseLockName,omitempty"`
 }
 
 type Config struct {

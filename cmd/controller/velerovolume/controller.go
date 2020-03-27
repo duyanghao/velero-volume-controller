@@ -101,7 +101,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 	// Wait for the caches to be synced before starting workers
 	klog.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.podsSynced, c.podsSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.podsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
