@@ -80,3 +80,4 @@ HEAD of this repository will match HEAD of [vmware-tanzu/velero](https://github.
 * [velero backup Kubernetes Persistent Volume failed with minio](https://github.com/vmware-tanzu/velero/issues/2355)
 * [sample-controller](https://github.com/kubernetes/sample-controller)
 * [Leader Election Example](https://github.com/kubernetes/client-go/tree/master/examples/leader-election)
+* [Add 3rd party controller to build an automatic way to backup all volume resources in the cluster](https://github.com/vmware-tanzu/velero/issues/2375)
