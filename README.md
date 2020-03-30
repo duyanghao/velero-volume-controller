@@ -69,9 +69,9 @@ The following table lists the configurable parameters of the `velero-volume-cont
 | `veleroVolumeCfg.includeVolumeTypes`                                                       | The comma-separated list of [volume types](https://kubernetes.io/docs/concepts/storage/volumes/) to include in the backup annotation addition(default: all volume types).                                                                                                                                                                                                                                                                                                        | `persistentVolumeClaim`                          |
 | `veleroVolumeCfg.excludeVolumeTypes`                                                       | The comma-separated list of [volume types](https://kubernetes.io/docs/concepts/storage/volumes/) to exclude from the backup annotation addition.                                                                                                                                                                                                                                                                                                        |                           |
 
-## Compatibility
+## Roadmap
 
-HEAD of this repository will match HEAD of [vmware-tanzu/velero](https://github.com/vmware-tanzu/velero).
+`velero-volume-controller` will follow upstream [vmware-tanzu/velero](https://github.com/vmware-tanzu/velero) support for [Restic Integration](https://velero.io/docs/v1.3.1/restic/). 
 
 ## Refs
 
