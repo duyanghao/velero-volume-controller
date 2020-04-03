@@ -240,7 +240,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	err = c.addBackupAnnotationsToPod(pod)
 	if err != nil {
-		klog.Errorf("failed to add velero backup annotations to pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
+		klog.Errorf("failed to add velero restic backup annotation to pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
 		return err
 	}
 
@@ -252,25 +252,26 @@ func (c *Controller) syncHandler(key string) error {
 // iterate over all volumes of the pod and add the velero backup annotation to it.
 func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 	// Iterate over all volumes
-	var veleroBackupAnnotationValue []string
+	var veleroBackupAnnotationArray []string
 	for _, volume := range pod.Spec.Volumes {
 		// Check if volume uses persistentVolumeClaim and meets volume type requirements
 		if volume.PersistentVolumeClaim != nil && c.checkVolumeTypeRequirements(constants.VOLUME_TYPE_PERSISTENTVOLUMECLAIM) {
 			klog.V(4).Infof("pod '%s/%s' uses volume '%s' from pvc '%s'", pod.Namespace, pod.Name, volume.Name, volume.PersistentVolumeClaim.ClaimName)
-			veleroBackupAnnotationValue = append(veleroBackupAnnotationValue, volume.Name)
+			veleroBackupAnnotationArray = append(veleroBackupAnnotationArray, volume.Name)
 		}
 		// TODO: add other volume types ...
 	}
-	if len(veleroBackupAnnotationValue) > 0 {
+	if len(veleroBackupAnnotationArray) > 0 {
 		// NEVER modify objects from the store. It's a read-only, local cache.
 		// You can use DeepCopy() to make a deep copy of original object and modify this copy
 		// Or create a copy manually for better performance
+		veleroBackupAnnotationValue := strings.Join(veleroBackupAnnotationArray, ",")
 		podCopy := pod.DeepCopy()
 		if podCopy.Annotations != nil {
-			podCopy.Annotations[constants.VELERO_BACKUP_ANNOTATION_KEY] = strings.Join(veleroBackupAnnotationValue, ",")
+			podCopy.Annotations[constants.VELERO_BACKUP_ANNOTATION_KEY] = veleroBackupAnnotationValue
 		} else {
 			podCopy.Annotations = map[string]string{
-				constants.VELERO_BACKUP_ANNOTATION_KEY: strings.Join(veleroBackupAnnotationValue, ","),
+				constants.VELERO_BACKUP_ANNOTATION_KEY: veleroBackupAnnotationValue,
 			}
 		}
 		// Update pod annotations
@@ -278,6 +279,7 @@ func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 		if err != nil {
 			return err
 		}
+		klog.V(4).Infof("add velero restic backup annotation: '%s=%s' to pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, veleroBackupAnnotationValue, pod.Namespace, pod.Name)
 	}
 	return nil
 }
