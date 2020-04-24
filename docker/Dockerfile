@@ -12,7 +12,6 @@ COPY Makefile /go/src/github.com/duyanghao/velero-volume-controller
 
 COPY go.mod /go/src/github.com/duyanghao/velero-volume-controller
 COPY go.sum /go/src/github.com/duyanghao/velero-volume-controller
-COPY vendor /go/src/github.com/duyanghao/velero-volume-controller/vendor
 
 ENV CGO_ENABLED 0
 ENV GOOS linux
@@ -20,7 +19,7 @@ ENV GO111MODULE=on
 
 ENV TIMEZONE "Asia/Shanghai"
 
-RUN make src.build
+RUN make build
 RUN mv build/velero-volume-controller/velero-volume-controller /go/bin
 
 # Production stage

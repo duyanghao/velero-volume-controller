@@ -17,51 +17,25 @@ UNAME := $(shell uname)
 ################################################
 
 .PHONY: all
-all: build test
+all: build
 
 .PHONY: pre-build
 pre-build:
-	$(GO_VENDOR) download
+	$(GO_VENDOR) vendor
 
 .PHONY: build
 build: pre-build
 	$(MAKE) src.build
 
-.PHONY: test
-test: build
-	$(MAKE) src.test
-
-.PHONY: install
-install:
-	$(MAKE) src.install
-
 .PHONY: clean
-clean: src.clean
+clean:
 	$(RM) -rf $(BUILD_FOLDER)
-
-## vendor/ #####################################
-
-.PHONY: download
-download:
-	$(GO_VENDOR) download
 
 ## src/ ########################################
 
 .PHONY: src.build
 src.build:
 	cd cmd/controller && GO111MODULE=on $(GO) build -mod=vendor -v -o ../../$(BUILD_FOLDER)/velero-volume-controller/velero-volume-controller
-
-.PHONY: src.test
-src.test:
-	$(GO) test -count=1 -v ./worker/...
-
-.PHONY: src.install
-src.install:
-	GO111MODULE=on $(GO) install -v ./worker/...
-
-.PHONY: src.clean
-src.clean:
-	GO111MODULE=on $(GO) clean -i ./worker/...
 
 ## dockerfiles/ ########################################
 
