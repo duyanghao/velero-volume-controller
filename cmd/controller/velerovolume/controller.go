@@ -217,7 +217,7 @@ func (c *Controller) syncHandler(key string) error {
 	if pod.Status.Phase != corev1.PodRunning {
 		err = c.removeBackupAnnotationsFromPod(pod)
 		if err != nil {
-			klog.Errorf("failed to remove velero restic backup annotation to pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
+			klog.Errorf("failed to remove velero restic backup annotation from pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
 		}
 		return err
 	}
@@ -320,7 +320,7 @@ func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
 			if err != nil {
 				return err
 			}
-			klog.V(4).Infof("remove velero restic backup annotation: '%s' to pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, pod.Namespace, pod.Name)
+			klog.V(4).Infof("remove velero restic backup annotation: '%s' from pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, pod.Namespace, pod.Name)
 		}
 	}
 }
