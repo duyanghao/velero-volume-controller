@@ -12,6 +12,7 @@ type VeleroVolumeCfg struct {
 	ExcludeNamespaces  string `yaml:"excludeNamespaces,omitempty"`
 	IncludeVolumeTypes string `yaml:"includeVolumeTypes,omitempty"`
 	ExcludeVolumeTypes string `yaml:"excludeVolumeTypes,omitempty"`
+	ExcludeJobs        bool   `yaml:"excludeJobs"`
 }
 
 type ClusterServerCfg struct {

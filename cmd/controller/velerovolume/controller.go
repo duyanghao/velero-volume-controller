@@ -19,12 +19,12 @@ package velerovolume
 import (
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	coreinformers "k8s.io/client-go/informers/core/v1"
@@ -209,6 +209,29 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	// If pod is pending, we ignore it for moment
+	if pod.Status.Phase == corev1.PodPending {
+		return nil
+	}
+	// If pod is not running anymore, we remove its eventual annotation
+	if pod.Status.Phase != corev1.PodRunning {
+		err = c.removeBackupAnnotationsFromPod(pod)
+		if err != nil {
+			klog.Errorf("failed to remove velero restic backup annotation to pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
+		}
+		return err
+	}
+
+	// Drop pods controlled by a job
+	if c.cfg.ExcludeJobs {
+		for _, owner := range pod.OwnerReferences {
+			if owner.Kind == "Job" {
+				klog.V(4).Infof("drop pod: '%s/%s' as it's controlled by a job", pod.Namespace, pod.Name)
+				return nil
+			}
+		}
+	}
+
 	// Drop pods that don't meet namespace requirements
 	if c.cfg.IncludeNamespaces != "" {
 		flag := false
@@ -282,6 +305,24 @@ func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 		klog.V(4).Infof("add velero restic backup annotation: '%s=%s' to pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, veleroBackupAnnotationValue, pod.Namespace, pod.Name)
 	}
 	return nil
+}
+
+// removeBackupAnnotationsFromPod removes relevant backup annotation from pod.
+func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
+	if pod.Annotations != nil {
+		if _, ok := pod.Annotations[constants.VELERO_BACKUP_ANNOTATION_KEY]; ok {
+			// Remove annotation as it is present
+			podCopy := pod.DeepCopy()
+			delete(podCopy.Annotations, constants.VELERO_BACKUP_ANNOTATION_KEY)
+
+			// Update pod
+			_, err := c.kubeclientset.CoreV1().Pods(pod.Namespace).Update(context.TODO(), podCopy, metav1.UpdateOptions{})
+			if err != nil {
+				return err
+			}
+			klog.V(4).Infof("remove velero restic backup annotation: '%s' to pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, pod.Namespace, pod.Name)
+		}
+	}
 }
 
 // checkVolumeTypeRequirements is a function that indicates if a volume meets backup volume type requirements
