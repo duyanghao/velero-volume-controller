@@ -322,7 +322,7 @@ func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 // removeBackupAnnotationsFromPod removes relevant backup annotation from pod.
 func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
 	if pod.Annotations != nil {
-		if _, ok := pod.Annotations[constants.VELERO_BACKUP_ANNOTATION_KEY]; ok {
+		if _, exist := pod.Annotations[constants.VELERO_BACKUP_ANNOTATION_KEY]; exist {
 			// Remove annotation as it is present
 			podCopy := pod.DeepCopy()
 			delete(podCopy.Annotations, constants.VELERO_BACKUP_ANNOTATION_KEY)
