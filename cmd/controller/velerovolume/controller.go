@@ -209,17 +209,34 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// If pod is pending, we ignore it for moment
-	if pod.Status.Phase == corev1.PodPending {
+	// Check if this pod satisfies the options
+	if !c.checkFilterOptions(pod) {
 		return nil
 	}
-	// If pod is not running anymore, we remove its eventual annotation
-	if pod.Status.Phase != corev1.PodRunning {
+
+	if pod.Status.Phase == corev1.PodRunning {
+		// Pod is running: we add (or update) its annotation
+		err = c.addBackupAnnotationsToPod(pod)
+		if err != nil {
+			klog.Errorf("failed to add velero restic backup annotation to pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
+			return err
+		}
+	} else {
+		// Pod is not running anymore: we remove its eventual annotation
 		err = c.removeBackupAnnotationsFromPod(pod)
 		if err != nil {
 			klog.Errorf("failed to remove velero restic backup annotation from pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
+			return err
 		}
-		return err
+	}
+
+	return nil
+}
+
+func (c *Controller) checkFilterOptions(pod *corev1.Pod) bool {
+	// If pod is pending, we ignore it for moment
+	if pod.Status.Phase == corev1.PodPending {
+		return false
 	}
 
 	// Drop pods controlled by a job
@@ -227,7 +244,7 @@ func (c *Controller) syncHandler(key string) error {
 		for _, owner := range pod.OwnerReferences {
 			if owner.Kind == "Job" {
 				klog.V(4).Infof("drop pod: '%s/%s' as it's controlled by a job", pod.Namespace, pod.Name)
-				return nil
+				return false
 			}
 		}
 	}
@@ -244,7 +261,7 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		if !flag {
 			klog.V(4).Infof("drop pod: '%s/%s' as it's outside the range of including namespaces", pod.Namespace, pod.Name)
-			return nil
+			return false
 		}
 	} else if c.cfg.ExcludeNamespaces != "" {
 		flag := true
@@ -257,17 +274,12 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		if !flag {
 			klog.V(4).Infof("drop pod: '%s/%s' as it's within the range of excluding namespaces", pod.Namespace, pod.Name)
-			return nil
+			return false
 		}
 	}
 
-	err = c.addBackupAnnotationsToPod(pod)
-	if err != nil {
-		klog.Errorf("failed to add velero restic backup annotation to pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
-		return err
-	}
-
-	return nil
+	// The pod passed all the checks
+	return true
 }
 
 // addBackupAnnotationsToPod adds relevant backup annotation to pod with volumes.
