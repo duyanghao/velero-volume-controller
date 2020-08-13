@@ -341,6 +341,7 @@ func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
 			klog.V(4).Infof("remove velero restic backup annotation: '%s' from pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, pod.Namespace, pod.Name)
 		}
 	}
+	return nil
 }
 
 // checkVolumeTypeRequirements is a function that indicates if a volume meets backup volume type requirements
