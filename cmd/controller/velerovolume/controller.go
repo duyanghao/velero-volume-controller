@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ryanuber/go-glob"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -239,12 +240,17 @@ func (c *Controller) checkFilterOptions(pod *corev1.Pod) bool {
 		return false
 	}
 
-	// Drop pods controlled by a job
-	if c.cfg.ExcludeJobs {
+	// Drop pods controlled by a job that don't meet name requirements
+	if c.cfg.ExcludeJobs != "" {
 		for _, owner := range pod.OwnerReferences {
 			if owner.Kind == "Job" {
-				klog.V(4).Infof("drop pod: '%s/%s' as it's controlled by a job", pod.Namespace, pod.Name)
-				return false
+				excludeJobs := strings.Split(c.cfg.ExcludeJobs, ",")
+				for _, job := range excludeJobs {
+					if glob.Glob(job, owner.Name) {
+						klog.V(4).Infof("drop pod: '%s/%s' as it's controlled by a job within the range of excluding jobs", pod.Namespace, pod.Name)
+						return false
+					}
+				}
 			}
 		}
 	}
