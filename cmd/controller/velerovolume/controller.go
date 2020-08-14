@@ -210,20 +210,20 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// Check if this pod satisfies the options
+	// Check if this pod satisfies the filter options
 	if !c.checkFilterOptions(pod) {
 		return nil
 	}
 
 	if pod.Status.Phase == corev1.PodRunning {
-		// Pod is running: we add (or update) its annotation
+		// Try to add restic backup annotation to pod when it is running
 		err = c.addBackupAnnotationsToPod(pod)
 		if err != nil {
 			klog.Errorf("failed to add velero restic backup annotation to pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
 			return err
 		}
 	} else {
-		// Pod is not running anymore: we remove its eventual annotation
+		// Try to remove restic backup annotation from pod when it is not running anymore
 		err = c.removeBackupAnnotationsFromPod(pod)
 		if err != nil {
 			klog.Errorf("failed to remove velero restic backup annotation from pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
@@ -240,7 +240,7 @@ func (c *Controller) checkFilterOptions(pod *corev1.Pod) bool {
 		return false
 	}
 
-	// Drop pods controlled by a job that don't meet name requirements
+	// Drop pods controlled by excluding jobs
 	if c.cfg.ExcludeJobs != "" {
 		for _, owner := range pod.OwnerReferences {
 			if owner.Kind == "Job" {
@@ -326,6 +326,8 @@ func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 }
 
 // removeBackupAnnotationsFromPod removes relevant backup annotation from pod.
+// This function aims to avoid restic backup PartiallyFailed when pod status changed.
+// Refs to https://github.com/duyanghao/velero-volume-controller/issues/6
 func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
 	if pod.Annotations != nil {
 		if _, exist := pod.Annotations[constants.VELERO_BACKUP_ANNOTATION_KEY]; exist {
@@ -333,7 +335,7 @@ func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
 			podCopy := pod.DeepCopy()
 			delete(podCopy.Annotations, constants.VELERO_BACKUP_ANNOTATION_KEY)
 
-			// Update pod
+			// Update pod annotations
 			_, err := c.kubeclientset.CoreV1().Pods(pod.Namespace).Update(context.TODO(), podCopy, metav1.UpdateOptions{})
 			if err != nil {
 				return err

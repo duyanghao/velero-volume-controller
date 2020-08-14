@@ -8,3 +8,4 @@ veleroVolumeCfg:
   excludeNamespaces:
   includeVolumeTypes: persistentVolumeClaim
   excludeVolumeTypes:
+  excludeJobs: *
