@@ -234,6 +234,7 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
+// checkFilterOptions aims to bypass pods that don't meet filter requirements
 func (c *Controller) checkFilterOptions(pod *corev1.Pod) bool {
 	// If pod is pending, we ignore it for moment
 	if pod.Status.Phase == corev1.PodPending {
