@@ -19,12 +19,13 @@ package velerovolume
 import (
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"time"
 
+	"github.com/ryanuber/go-glob"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	coreinformers "k8s.io/client-go/informers/core/v1"
@@ -209,6 +210,52 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	// Check if this pod satisfies the filter options
+	if !c.checkFilterOptions(pod) {
+		return nil
+	}
+
+	if pod.Status.Phase == corev1.PodRunning {
+		// Try to add restic backup annotation to pod when it is running
+		err = c.addBackupAnnotationsToPod(pod)
+		if err != nil {
+			klog.Errorf("failed to add velero restic backup annotation to pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
+			return err
+		}
+	} else {
+		// Try to remove restic backup annotation from pod when it is not running anymore
+		err = c.removeBackupAnnotationsFromPod(pod)
+		if err != nil {
+			klog.Errorf("failed to remove velero restic backup annotation from pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
+			return err
+		}
+	}
+
+	return nil
+}
+
+// checkFilterOptions aims to bypass pods that don't meet filter requirements
+func (c *Controller) checkFilterOptions(pod *corev1.Pod) bool {
+	// If pod is pending, we ignore it for moment
+	if pod.Status.Phase == corev1.PodPending {
+		return false
+	}
+
+	// Drop pods controlled by excluding jobs
+	if c.cfg.ExcludeJobs != "" {
+		for _, owner := range pod.OwnerReferences {
+			if owner.Kind == "Job" {
+				excludeJobs := strings.Split(c.cfg.ExcludeJobs, ",")
+				for _, job := range excludeJobs {
+					if glob.Glob(job, owner.Name) {
+						klog.V(4).Infof("drop pod: '%s/%s' as it's controlled by a job within the range of excluding jobs", pod.Namespace, pod.Name)
+						return false
+					}
+				}
+			}
+		}
+	}
+
 	// Drop pods that don't meet namespace requirements
 	if c.cfg.IncludeNamespaces != "" {
 		flag := false
@@ -221,7 +268,7 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		if !flag {
 			klog.V(4).Infof("drop pod: '%s/%s' as it's outside the range of including namespaces", pod.Namespace, pod.Name)
-			return nil
+			return false
 		}
 	} else if c.cfg.ExcludeNamespaces != "" {
 		flag := true
@@ -234,17 +281,12 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		if !flag {
 			klog.V(4).Infof("drop pod: '%s/%s' as it's within the range of excluding namespaces", pod.Namespace, pod.Name)
-			return nil
+			return false
 		}
 	}
 
-	err = c.addBackupAnnotationsToPod(pod)
-	if err != nil {
-		klog.Errorf("failed to add velero restic backup annotation to pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
-		return err
-	}
-
-	return nil
+	// The pod passed all the checks
+	return true
 }
 
 // addBackupAnnotationsToPod adds relevant backup annotation to pod with volumes.
@@ -280,6 +322,27 @@ func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 			return err
 		}
 		klog.V(4).Infof("add velero restic backup annotation: '%s=%s' to pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, veleroBackupAnnotationValue, pod.Namespace, pod.Name)
+	}
+	return nil
+}
+
+// removeBackupAnnotationsFromPod removes relevant backup annotation from pod.
+// This function aims to avoid restic backup PartiallyFailed when pod status changed.
+// Refs to https://github.com/duyanghao/velero-volume-controller/issues/6
+func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
+	if pod.Annotations != nil {
+		if _, exist := pod.Annotations[constants.VELERO_BACKUP_ANNOTATION_KEY]; exist {
+			// Remove annotation as it is present
+			podCopy := pod.DeepCopy()
+			delete(podCopy.Annotations, constants.VELERO_BACKUP_ANNOTATION_KEY)
+
+			// Update pod annotations
+			_, err := c.kubeclientset.CoreV1().Pods(pod.Namespace).Update(context.TODO(), podCopy, metav1.UpdateOptions{})
+			if err != nil {
+				return err
+			}
+			klog.V(4).Infof("remove velero restic backup annotation: '%s' from pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, pod.Namespace, pod.Name)
+		}
 	}
 	return nil
 }
