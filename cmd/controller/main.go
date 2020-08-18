@@ -19,9 +19,10 @@ package main
 import (
 	"context"
 	"flag"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -66,7 +67,7 @@ func main() {
 	run := func() {
 		kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
 
-		controller := velerovolume.NewController(cfg.VeleroVolumeCfg, kubeClient, kubeInformerFactory.Core().V1().Pods())
+		controller := velerovolume.NewController(cfg.VeleroVolumeCfg, kubeClient, kubeInformerFactory.Core().V1().Pods(), kubeInformerFactory.Core().V1().PersistentVolumeClaims())
 
 		// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
 		// Start method is non-blocking and runs all registered informers in a dedicated goroutine.

@@ -8,11 +8,12 @@ import (
 )
 
 type VeleroVolumeCfg struct {
-	IncludeNamespaces  string `yaml:"includeNamespaces,omitempty"`
-	ExcludeNamespaces  string `yaml:"excludeNamespaces,omitempty"`
-	IncludeVolumeTypes string `yaml:"includeVolumeTypes,omitempty"`
-	ExcludeVolumeTypes string `yaml:"excludeVolumeTypes,omitempty"`
-	ExcludeJobs        string `yaml:"excludeJobs,omitempty"`
+	IncludeNamespaces     string `yaml:"includeNamespaces,omitempty"`
+	ExcludeNamespaces     string `yaml:"excludeNamespaces,omitempty"`
+	IncludeVolumeTypes    string `yaml:"includeVolumeTypes,omitempty"`
+	ExcludeVolumeTypes    string `yaml:"excludeVolumeTypes,omitempty"`
+	ExcludeJobs           string `yaml:"excludeJobs,omitempty"`
+	ExcludeStorageClasses string `yaml:"ExcludeStorageClasses,omitempty"`
 }
 
 type ClusterServerCfg struct {

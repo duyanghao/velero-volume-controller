@@ -48,6 +48,8 @@ type Controller struct {
 	podsLister corelisters.PodLister
 	podsSynced cache.InformerSynced
 
+	pvcLister corelisters.PersistentVolumeClaimLister
+
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
@@ -60,13 +62,15 @@ type Controller struct {
 func NewController(
 	cfg *config.VeleroVolumeCfg,
 	kubeclientset kubernetes.Interface,
-	podInformer coreinformers.PodInformer) *Controller {
+	podInformer coreinformers.PodInformer,
+	pvcInformer coreinformers.PersistentVolumeClaimInformer) *Controller {
 
 	controller := &Controller{
 		cfg:           cfg,
 		kubeclientset: kubeclientset,
 		podsLister:    podInformer.Lister(),
 		podsSynced:    podInformer.Informer().HasSynced,
+		pvcLister:     pvcInformer.Lister(),
 		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods"),
 	}
 
@@ -297,7 +301,7 @@ func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 	var veleroBackupAnnotationArray []string
 	for _, volume := range pod.Spec.Volumes {
 		// Check if volume uses persistentVolumeClaim and meets volume type requirements
-		if volume.PersistentVolumeClaim != nil && c.checkVolumeTypeRequirements(constants.VOLUME_TYPE_PERSISTENTVOLUMECLAIM) {
+		if volume.PersistentVolumeClaim != nil && c.checkVolumeTypeRequirements(constants.VOLUME_TYPE_PERSISTENTVOLUMECLAIM, volume, pod.Namespace) {
 			klog.V(4).Infof("pod '%s/%s' uses volume '%s' from pvc '%s'", pod.Namespace, pod.Name, volume.Name, volume.PersistentVolumeClaim.ClaimName)
 			veleroBackupAnnotationArray = append(veleroBackupAnnotationArray, volume.Name)
 		}
@@ -348,7 +352,7 @@ func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
 }
 
 // checkVolumeTypeRequirements is a function that indicates if a volume meets backup volume type requirements
-func (c *Controller) checkVolumeTypeRequirements(volumeType string) bool {
+func (c *Controller) checkVolumeTypeRequirements(volumeType string, volume corev1.Volume, namespace string) bool {
 	if c.cfg.IncludeVolumeTypes != "" {
 		includeVolumeTypes := strings.Split(c.cfg.IncludeVolumeTypes, ",")
 		for _, vt := range includeVolumeTypes {
@@ -364,6 +368,21 @@ func (c *Controller) checkVolumeTypeRequirements(volumeType string) bool {
 				return false
 			}
 		}
+	} else if c.cfg.ExcludeStorageClasses != "" {
+		excludeStorageClasses := strings.Split(c.cfg.ExcludeStorageClasses, ",")
+		pvcName := volume.PersistentVolumeClaim.ClaimName
+		pvc, err := c.pvcLister.PersistentVolumeClaims(namespace).Get(pvcName)
+		if err != nil {
+			klog.Warningf("Did not find the pvc with name %v: %v, cannot proceed", pvcName, err)
+			return false
+		}
+		for _, sc := range excludeStorageClasses {
+			if pvc.Spec.StorageClassName != nil && *pvc.Spec.StorageClassName == sc {
+				klog.V(4).Infof("Skipping pvc volume %v because its storage class %v is excluded", volume.Name, sc)
+				return false
+			}
+		}
+
 	}
 	return true
 }

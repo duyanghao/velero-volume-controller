@@ -7,9 +7,9 @@ velero-volume-controller
 
 [velero](https://github.com/vmware-tanzu/velero) is one of the best `bur`(backup and restore) tools for workloads running on Kubernetes, and its [Restic Integration](https://velero.io/docs/v1.3.1/restic/) capability provides an out-of-the-box solution for backing up and restoring almost any type of Kubernetes volume*, so we can use Velero with Restic Integration to backup and restore Kubernetes applications and its relevant volumes data.
 
-But one requirement of velero Restic Integration is that users have to add relevant backup annotation to pods, defining which pod volume(s) they want to back up, and in the meantime velero hasn't provided a do-one-command or automatic way to backup all volume resources in the cluster without annotations. Therefore, users have to add backup annotation for all pods with volumes in cluster by hand, which is complicated and unpractical in a production environment. 
+But one requirement of velero Restic Integration is that users have to add relevant backup annotation to pods, defining which pod volume(s) they want to back up, and in the meantime velero hasn't provided a do-one-command or automatic way to backup all volume resources in the cluster without annotations. Therefore, users have to add backup annotation for all pods with volumes in cluster by hand, which is complicated and unpractical in a production environment.
 
-To solve this, `velero-volume-controller` helps users to do this dull job automatically.     
+To solve this, `velero-volume-controller` helps users to do this dull job automatically.
 
 ## Precondition
 
@@ -69,10 +69,11 @@ The following table lists the configurable parameters of the `velero-volume-cont
 | `veleroVolumeCfg.includeVolumeTypes`                                                       | The comma-separated list of [volume types](https://kubernetes.io/docs/concepts/storage/volumes/) to include in the backup annotation addition (default: all volume types).                                                                                                                                                                                                                                                                                                        | `persistentVolumeClaim`                          |
 | `veleroVolumeCfg.excludeVolumeTypes`                                                       | The comma-separated list of [volume types](https://kubernetes.io/docs/concepts/storage/volumes/) to exclude from the backup annotation addition.                                                                                                                                                                                                                                                                                                        |                           |
 | `veleroVolumeCfg.excludeJobs`                                                       | The comma-separated list of [job names](https://kubernetes.io/docs/concepts/workloads/controllers/job/) to exclude from the backup annotation addition (support [basic string globs](https://github.com/ryanuber/go-glob)).                                                                                                                                                                                                                                                                                                        |                           |
+| `veleroVolumeCfg.excludeStorageClasses`                                                       | The comma-separated list of [storage classes](https://kubernetes.io/docs/concepts/storage/storage-classes/) to exclude from the backup annotation addition. This allows you to exclude storage classes that support snapshoting, since they should be handled by issuing a snapshot creation rather than go through restic.                                                    |                           |
 
 ## Roadmap
 
-`velero-volume-controller` will follow upstream [vmware-tanzu/velero](https://github.com/vmware-tanzu/velero) support for [Restic Integration](https://velero.io/docs/v1.3.1/restic/). 
+`velero-volume-controller` will follow upstream [vmware-tanzu/velero](https://github.com/vmware-tanzu/velero) support for [Restic Integration](https://velero.io/docs/v1.3.1/restic/).
 
 ## Refs
 
