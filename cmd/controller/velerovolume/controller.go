@@ -210,8 +210,12 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// Check if this pod satisfies the filter options
+	// Check if this pod satisfies the filter options, if it doesn't remove the backup annotation if present
 	if !c.checkFilterOptions(pod) {
+		err = c.removeBackupAnnotationsFromPod(pod)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -226,7 +230,6 @@ func (c *Controller) syncHandler(key string) error {
 		// Try to remove restic backup annotation from pod when it is not running anymore
 		err = c.removeBackupAnnotationsFromPod(pod)
 		if err != nil {
-			klog.Errorf("failed to remove velero restic backup annotation from pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
 			return err
 		}
 	}
@@ -322,6 +325,12 @@ func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 			return err
 		}
 		klog.V(4).Infof("add velero restic backup annotation: '%s=%s' to pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, veleroBackupAnnotationValue, pod.Namespace, pod.Name)
+	}  else  {
+		// No volumes to backup, remove backup annotation if present
+		err := c.removeBackupAnnotationsFromPod(pod)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -339,6 +348,7 @@ func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
 			// Update pod annotations
 			_, err := c.kubeclientset.CoreV1().Pods(pod.Namespace).Update(context.TODO(), podCopy, metav1.UpdateOptions{})
 			if err != nil {
+				klog.Errorf("failed to remove velero restic backup annotation from pod: '%s/%s', error: %s", pod.Namespace, pod.Name, err.Error())
 				return err
 			}
 			klog.V(4).Infof("remove velero restic backup annotation: '%s' from pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, pod.Namespace, pod.Name)
