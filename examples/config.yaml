@@ -9,3 +9,5 @@ veleroVolumeCfg:
   includeVolumeTypes: persistentVolumeClaim
   excludeVolumeTypes:
   excludeJobs: *
+  includeStorageClasses:
+  excludeStorageClasses:
