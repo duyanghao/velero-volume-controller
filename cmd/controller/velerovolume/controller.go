@@ -210,7 +210,8 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// Check if this pod satisfies the filter options, if it doesn't remove the backup annotation if present
+	// Check whether this pod satisfies the filter options, and if it
+	// doesn't, try to remove the backup annotation if present
 	if !c.checkFilterOptions(pod) {
 		err = c.removeBackupAnnotationsFromPod(pod)
 		if err != nil {
@@ -325,8 +326,8 @@ func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 			return err
 		}
 		klog.V(4).Infof("add velero restic backup annotation: '%s=%s' to pod '%s/%s' successfully", constants.VELERO_BACKUP_ANNOTATION_KEY, veleroBackupAnnotationValue, pod.Namespace, pod.Name)
-	}  else  {
-		// No volumes to backup, remove backup annotation if present
+	} else {
+		// No volumes to backup anymore, try to remove backup annotation if present
 		err := c.removeBackupAnnotationsFromPod(pod)
 		if err != nil {
 			return err
@@ -335,9 +336,13 @@ func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 	return nil
 }
 
-// removeBackupAnnotationsFromPod removes relevant backup annotation from pod.
-// This function aims to avoid restic backup PartiallyFailed when pod status changed.
+// removeBackupAnnotationsFromPod trys to remove relevant backup annotation from pod.
+// This function aims to avoid the following situations:
+// 1. restic backup PartiallyFailed when pod status changed.
 // Refs to https://github.com/duyanghao/velero-volume-controller/issues/6
+// 2. restic backup PartiallyFailed when pod volume disappeared.
+// 3. restic continues to backup pods that can't meet filter options anymore.
+// Refs to https://github.com/duyanghao/velero-volume-controller/pull/11
 func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
 	if pod.Annotations != nil {
 		if _, exist := pod.Annotations[constants.VELERO_BACKUP_ANNOTATION_KEY]; exist {
