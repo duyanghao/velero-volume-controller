@@ -37,6 +37,7 @@ import (
 
 	"github.com/duyanghao/velero-volume-controller/cmd/controller/velerovolume/config"
 	"github.com/duyanghao/velero-volume-controller/pkg/constants"
+	"github.com/duyanghao/velero-volume-controller/pkg/helpers"
 )
 
 // Controller is the controller implementation for Pod resources
@@ -299,13 +300,41 @@ func (c *Controller) checkFilterOptions(pod *corev1.Pod) bool {
 func (c *Controller) addBackupAnnotationsToPod(pod *corev1.Pod) error {
 	// Iterate over all volumes
 	var veleroBackupAnnotationArray []string
+
 	for _, volume := range pod.Spec.Volumes {
-		// Check if volume uses persistentVolumeClaim and meets volume type requirements
-		if volume.PersistentVolumeClaim != nil && c.checkVolumeTypeRequirements(constants.VOLUME_TYPE_PERSISTENTVOLUMECLAIM) {
+		volumeType := helpers.GetPodVolumeType(volume.VolumeSource)
+
+		// Check if volume uses persistentVolumeClaim and if so, retrieve underlying volume
+		if volume.PersistentVolumeClaim != nil {
 			klog.V(4).Infof("pod '%s/%s' uses volume '%s' from pvc '%s'", pod.Namespace, pod.Name, volume.Name, volume.PersistentVolumeClaim.ClaimName)
+
+			claim, err := c.kubeclientset.CoreV1().PersistentVolumeClaims(pod.Namespace).Get(context.TODO(), volume.PersistentVolumeClaim.ClaimName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			pv, err := c.kubeclientset.CoreV1().PersistentVolumes().Get(context.TODO(), claim.Spec.VolumeName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			klog.V(4).Infof("volume %s retrieved for claim %s", pv.Name, claim.Name)
+			storageClass := *claim.Spec.StorageClassName
+			if storageClass == "" {
+				storageClass = pv.Spec.StorageClassName
+			}
+			if !c.checkVolumeStorageClassRequirements(storageClass) {
+				break
+			}
+			volumeType = helpers.GetPersistentVolumeType(pv.Spec.PersistentVolumeSource)
+		}
+
+		// Check if volume meets volume type requirements
+		if c.checkVolumeTypeRequirements(volumeType, volume.PersistentVolumeClaim != nil) {
+			klog.V(4).Infof("volume %s of type %s matches requirements", volume.Name, volumeType)
 			veleroBackupAnnotationArray = append(veleroBackupAnnotationArray, volume.Name)
 		}
-		// TODO: add other volume types ...
+
 	}
 	if len(veleroBackupAnnotationArray) > 0 {
 		// NEVER modify objects from the store. It's a read-only, local cache.
@@ -363,19 +392,45 @@ func (c *Controller) removeBackupAnnotationsFromPod(pod *corev1.Pod) error {
 }
 
 // checkVolumeTypeRequirements is a function that indicates if a volume meets backup volume type requirements
-func (c *Controller) checkVolumeTypeRequirements(volumeType string) bool {
+func (c *Controller) checkVolumeTypeRequirements(volumeType string, isClaim bool) bool {
 	if c.cfg.IncludeVolumeTypes != "" {
-		includeVolumeTypes := strings.Split(c.cfg.IncludeVolumeTypes, ",")
+		includeVolumeTypes := strings.Split(strings.ReplaceAll(c.cfg.IncludeVolumeTypes, " ", ""), ",")
 		for _, vt := range includeVolumeTypes {
-			if vt == volumeType {
+			if strings.EqualFold(vt, volumeType) {
+				return true
+			} else if isClaim && vt == constants.VOLUME_TYPE_PERSISTENTVOLUMECLAIM {
 				return true
 			}
 		}
 		return false
-	} else if c.cfg.ExcludeVolumeTypes != "" {
-		excludeVolumeTypes := strings.Split(c.cfg.ExcludeVolumeTypes, ",")
+	} else {
+		excludeVolumeTypes := strings.Split(strings.ReplaceAll(c.cfg.ExcludeVolumeTypes, " ", ""), ",")
+		excludeVolumeTypes = append(excludeVolumeTypes, "hostPath", "secret", "configMap", "emptyDir")
 		for _, vt := range excludeVolumeTypes {
-			if vt == volumeType {
+			if strings.EqualFold(vt, volumeType) {
+				return false
+			} else if isClaim && vt == constants.VOLUME_TYPE_PERSISTENTVOLUMECLAIM {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// checkVolumeStorageClassRequirements is a function that indicates if a volume meets storage class requirements
+func (c *Controller) checkVolumeStorageClassRequirements(storageClass string) bool {
+	if c.cfg.IncludeStorageClasses != "" {
+		includeClasses := strings.Split(strings.ReplaceAll(c.cfg.IncludeStorageClasses, " ", ""), ",")
+		for _, sc := range includeClasses {
+			if sc == storageClass {
+				return true
+			}
+		}
+		return false
+	} else if c.cfg.ExcludeStorageClasses != "" {
+		excludeClasses := strings.Split(strings.ReplaceAll(c.cfg.ExcludeStorageClasses, " ", ""), ",")
+		for _, sc := range excludeClasses {
+			if sc == storageClass {
 				return false
 			}
 		}
