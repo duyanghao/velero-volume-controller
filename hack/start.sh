@@ -11,5 +11,5 @@ if [ $item -eq 1 ]; then
 fi
 
 echo "Start velero-volume-controller now ..."
-make src.build
+make build
 ./build/velero-volume-controller/velero-volume-controller -c ./examples/config.yaml -logtostderr=true -v=5 >> ./velero-volume-controller.log 2>&1 &
