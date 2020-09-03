@@ -47,9 +47,9 @@ $ sed -i 's|REPLACE_IMAGE|xxx/duyanghao/velero-volume-controller:v2.0|g' example
 $ kubectl apply -f examples/deployment/cluster-role.yaml
 $ kubectl apply -f examples/deployment/cluster-role-binding.yaml
 # Create ConfigMap
-$ kubectl apply -f examples/deployment/configmap.yaml
+$ kubectl apply -f examples/deployment/configmap.yaml -nvelero
 # Create velero-volume-controller deployment
-$ kubectl apply -f examples/deployment/velero-volume-controller.yaml
+$ kubectl apply -f examples/deployment/velero-volume-controller.yaml -nvelero
 ```
 
 ## Configuration
