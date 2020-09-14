@@ -1,0 +1,5 @@
+apiVersion: v2
+name: velero-volume-controller
+version: 1.0.0
+appVersion: v2.0
+description: Controller for velero that detects and adds relevant backup annotation to pods with volumes
