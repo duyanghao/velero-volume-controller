@@ -1,3 +1,13 @@
+## :warning: End of project :warning:
+
+![development](https://img.shields.io/badge/development-halted-red.svg)
+
+This project has ended since velero v1.5 has already supported the [opt-out approach](https://velero.io/docs/v1.5/restic/), and **all development/maintenance activities have halted**.
+
+As it is free software, people are free and welcome to fork and develop the codebase on their own.
+
+---
+
 velero-volume-controller
 ========================
 
