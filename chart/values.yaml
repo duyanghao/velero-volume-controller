@@ -1,0 +1,16 @@
+image:
+  repository: duyanghao/velero-volume-controller
+  tag: v2.0
+  pullSecret:
+  pullPolicy: IfNotPresent
+replicas: 1
+
+velero:
+  namespace: velero
+
+config:
+  includeNamespaces: default
+  excludeNamespaces:
+  includeVolumeTypes: persistentVolumeClaim
+  excludeVolumeTypes:
+  excludeJobs:
